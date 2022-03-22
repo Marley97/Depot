@@ -71,11 +71,6 @@ class StockSerializer(serializers.ModelSerializer):
         model = Stock
         fields = "__all__"
         
-class EmplacementSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Emplacement
-        fields = "__all__"
-        
 class VenteSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         representation = super().to_representation(instance)
@@ -95,7 +90,3 @@ class VenteSerializer(serializers.ModelSerializer):
         model = Vente
         fields = "__all__"
         
-class FactureSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Facture
-        fields = "__all__"

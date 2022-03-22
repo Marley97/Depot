@@ -61,8 +61,6 @@ class ProduitViewSet(viewsets.ModelViewSet):
         data = request.data
         user = request.user
         nom_produit = data.get('nom_produit')
-        date_fabrication = data.get('date_fabrication')
-        date_expiration = data.get('date_expiration')
         quantite = float(data.get('quantite'))
         prix_unitaire = float(data.get('prix_unitaire'))
         prix_total = float(quantite)*float(prix_unitaire)
@@ -70,22 +68,21 @@ class ProduitViewSet(viewsets.ModelViewSet):
         produit:Produit = Produit(
             user = request.user,
             nom_produit = nom_produit,
-            date_fabrication = date_fabrication,
-            date_expiration = date_expiration,
             quantite = quantite,
             prix_unitaire = prix_unitaire,
             prix_total = prix_total    
         )
         produit.save()
-        stock:Stock = Stock.objects.filter(produit__nom_produit=produit.nom_produit,produit__date_fabrication=produit.date_fabrication,produit__date_expiration=date_expiration)
+        stock:Stock = Stock.objects.filter(produit__nom_produit=produit.nom_produit)
         if stock:
             stock[0].entrees+=float(quantite)
+            stock[0].quantite_restante+=float(quantite)
             stock[0].save()
         else:
             stock1:Stock=Stock(
                 produit = produit,
                 entrees = produit.quantite,
-                sorties = produit.quantite
+                quantite_restante=produit.quantite
             )
             stock1.save()    
         return Response({'Status': 'Produit ajouter avec succès'}, 201)                 
@@ -100,27 +97,7 @@ class StockViewSet(viewsets.ModelViewSet):
     permission_classes = IsAuthenticated,
     queryset = Stock.objects.all()
     serializer_class = StockSerializer
-    
-class EmplacementViewSet(viewsets.ModelViewSet):
-    authentication_classes = [JWTAuthentication, SessionAuthentication]
-    permission_classes = IsAuthenticated,
-    queryset = Emplacement.objects.all()
-    serializer_class = EmplacementSerializer
-    @transaction.atomic
-    def create(self,request):
-        data = request.data
-        user = request.user
-        numero_etagere = data.get('numero_etagere')
-        numero_colonne = data.get('numero_colonne')
-        stock:Stock = Stock.objects.get(id=int(data.get('stock')))
-        emplacement:Emplacement=Emplacement(
-            numero_colonne = numero_colonne,
-            numero_etagere = numero_etagere,
-            stock = stock
-        )
-        emplacement.save()
-        return Response({'Status': 'Emplacement ajouter avec succès'}, 201)  
-    
+       
 class VenteViewSet(viewsets.ModelViewSet):
     authentication_classes = [JWTAuthentication, SessionAuthentication]
     permission_classes = IsAuthenticated,
@@ -135,40 +112,23 @@ class VenteViewSet(viewsets.ModelViewSet):
         vendeur:Vendeur = Vendeur.objects.get(id=int(data.get('vendeur')))
         client:Client = Client.objects.get(id=int(data.get('client')))
         prix_vente = quantite*stock.produit.prix_unitaire
-        vente:Vente=Vente(
-            user =request.user,
-            quantite =quantite,
-            prix_vente = prix_vente,
-            stock = stock,
-            vendeur = vendeur,
-            client =client
-        )
-        vente.save()
-        stock.sorties -=vente.quantite
-        stock.save()
-        return Response({'Status': 'Vente effectuer avec succès'}, 201)
+        if quantite>stock.quantite_restante or quantite<=0:
+            return Response({'Status':'echec,vous n avez pas assez de quantite en stock pour effectuer cette operation'})
+        else:    
+            vente:Vente=Vente(
+                user =request.user,
+                quantite =quantite,
+                prix_vente = prix_vente,
+                stock = stock,
+                vendeur = vendeur,
+                client =client
+            )
+            vente.save()
+            stock.quantite_restante -=vente.quantite
+            stock.save()
+            return Response({'Status': 'Vente effectuer avec succès'}, 201)
         
     
-class FactureViewSet(viewsets.ModelViewSet):
-    authentication_classes = [JWTAuthentication, SessionAuthentication]
-    permission_classes = IsAuthenticated,
-    queryset = Facture.objects.all()
-    serializer_class = FactureSerializer
-    @transaction.atomic
-    def create(self,request):
-        data = request.data
-        user = request.user
-        numero_facture = data.get(numero_facture)
-        vente:Vente = Vente.objects.get(id=int(data.get('vente')))
-        depot:Depot = Depot.objects.get(id=int(data.get('depot')))
-        facture:Facture=Facture(
-            user = request.user,
-            numero_facture =numero_facture,
-            vente = vente,
-            depot = depot
-        )
-        facture.save()
-        return Response({'Status': 'Facture  generer avec succès'}, 201) 
         
         
         

@@ -11,6 +11,5 @@ class ClientAdmin(admin.ModelAdmin):
 	list_filter = "nom",
 	search_fields = "nom","prenom"
 admin.site.register(Stock)
-admin.site.register(Emplacement)
 admin.site.register(Vente)
-admin.site.register(Facture)
+
