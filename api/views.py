@@ -9,6 +9,8 @@ from django.contrib.auth.models import User, Group
 from rest_framework import viewsets, mixins
 from rest_framework.views import APIView
 from rest_framework import viewsets
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters
 from .serializers import *
 from .models import *
 
@@ -56,6 +58,10 @@ class ProduitViewSet(viewsets.ModelViewSet):
     permission_classes = IsAuthenticated,
     queryset = Produit.objects.all()
     serializer_class = ProduitSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields={
+            'nom_produit':['exact']
+    }
     @transaction.atomic
     def create(self,request):
         data = request.data
