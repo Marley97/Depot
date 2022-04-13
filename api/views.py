@@ -33,12 +33,17 @@ class DepotViewSet(viewsets.ModelViewSet):
     queryset = Depot.objects.all()
     serializer_class = DepotSerializer
     
+
 class VendeurViewSet(viewsets.ModelViewSet):
     authentication_classes = [JWTAuthentication, SessionAuthentication]
     permission_classes = IsAuthenticated,
     queryset = Vendeur.objects.all()
     serializer_class = VendeurSerializer
-    
+
+    filter_backends = [DjangoFilterBackend,filters.SearchFilter]
+    search_fields = ['adresse',]
+    filterset_fields=['adresse','cni']
+
     @transaction.atomic
     def create(self, request):
         user = request.user
@@ -97,6 +102,11 @@ class ClientViewSet(viewsets.ModelViewSet):
     permission_classes = IsAuthenticated,
     queryset = Client.objects.all()
     serializer_class = ClientSerializer
+
+    filter_backends = [DjangoFilterBackend,filters.SearchFilter]
+    search_fields = ['nom','prenom']
+    filterset_fields=['nom','prenom']
+
     
 class StockViewSet(viewsets.ModelViewSet):     
     authentication_classes = [JWTAuthentication, SessionAuthentication]
