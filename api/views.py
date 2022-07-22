@@ -26,6 +26,29 @@ class GroupViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
 class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     queryset = User.objects.all().order_by('-id')
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
+    permission_classes = IsAuthenticated,
+    # modification mot de passe
+
+    @transaction.atomic()
+    def update(self, request, pk):
+        user = self.get_object()
+        print(user)
+        data = request.data
+        username = data.get('username')
+        first_name = data.get('first_name')
+        last_name = data.get('last_name')
+        nouv_password = data.get('nouv_password')
+        anc_password = data.get('anc_password')
+        if user.check_password(anc_password):
+            print("checked")
+            user.username = username
+            user.first_name = first_name
+            user.last_name = last_name
+            user.set_password(nouv_password)
+            user.save()
+            return Response({"status": "Utilisateur modifié avec success"}, 201)
+        return Response({"status": "Ancien mot de passe incorrect"}, 400)
     
 class DepotViewSet(viewsets.ModelViewSet):
     authentication_classes = [JWTAuthentication, SessionAuthentication]
@@ -44,20 +67,46 @@ class VendeurViewSet(viewsets.ModelViewSet):
     search_fields = ['adresse',]
     filterset_fields=['adresse','cni']
 
-    @transaction.atomic
+    @transaction.atomic()
     def create(self, request):
-        user = request.user
-        data = request.data
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        adresse = serializer.validated_data['adresse']
+        telephone = serializer.validated_data['telephone']
+        cni = serializer.validated_data['cni']
+        user = User(
+            username=serializer.validated_data['user']['username'],
+            first_name=serializer.validated_data['user']['first_name'],
+            last_name=serializer.validated_data['user']['last_name'],
+            email=serializer.validated_data['user']['email']
+        )
+        cod = user.username[:3].upper()
+        vend = Vendeur.objects.all().last()
+        vendeurId = 0
+        date = datetime.now()
+        year = date.strftime("%y")
+        umwaka = year[-3:]
+        if vend:
+            vendeurId = int(vend.id)+1
+        else:
+            vendeurId=1
+        if vendeurId<10:
+            cod= str(cod) +'-'+str(umwaka)+'-0'+str(vendeurId)
+        else:
+            cod= str(cod) +'-'+str(umwaka)+str(-vendeurId)
+
+        user.set_password(serializer.validated_data['user']['password'])
         vendeur = Vendeur(
-            user = user,
-            adresse = data.get('adresse'),
-            telephone = data.get('telephone'),
-            cni = data.get('cni')
+            user = request.user,
+            adresse = adresse,
+            telephone = telephone,
+            cni = cni,
+            code = cod
         )
         vendeur.save()
         serializer = VendeurSerializer(vendeur,many=False).data
         return Response(serializer,201)
-    
+
 class ProduitViewSet(viewsets.ModelViewSet):
     authentication_classes = [JWTAuthentication, SessionAuthentication]
     permission_classes = IsAuthenticated,
@@ -140,6 +189,7 @@ class VenteViewSet(viewsets.ModelViewSet):
                 client =client
             )
             vente.save()
+            stock.sorties+=vente.quantite
             stock.quantite_restante -=vente.quantite
             stock.save()
             return Response({'Status': 'Vente effectuer avec succès'}, 201)
