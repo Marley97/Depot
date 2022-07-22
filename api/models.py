@@ -18,6 +18,7 @@ class Vendeur(models.Model):
     adresse = models.CharField(max_length = 50)
     cni = models.CharField(max_length=50)
     telephone = models.CharField(max_length=20)
+    code = models.CharField(editable=False,max_length=100,null=True,unique=True)
     
     def __str__(self):
         return f"{self.id}"
@@ -50,6 +51,7 @@ class Stock(models.Model):
     quantite_restante = models.FloatField(null=True,editable=False)
     date_entree = models.DateField(auto_now=True,editable=False)
     date_sortie = models.DateField(null=True)
+    sorties = models.FloatField(editable=False,default=0)
     
     def __str__(self):
         return f"Quantite entrant :{self.entrees} "
